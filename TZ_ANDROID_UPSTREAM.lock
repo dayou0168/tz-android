@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/DrKLO/Telegram.git",
+  "commit": "45ab8f4308496e1f01026a97fcdb0d58a5274474",
+  "version_name": "12.9.2",
+  "version_code": 6991,
+  "compile_sdk": 35,
+  "build_tools": "35.0.0",
+  "ndk": "27.2.12479018",
+  "gradle": "8.7"
+}
