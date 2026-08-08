@@ -239,7 +239,9 @@ def getProps(String propName) {
         return "";
     }
 }
-apply plugin: 'com.google.gms.google-services'
+if (!project.hasProperty("TZ_NO_GOOGLE")) {
+    apply plugin: 'com.google.gms.google-services'
+}
 
 task checkVisibility {
     doFirst {

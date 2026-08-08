@@ -34,6 +34,35 @@ import org.telegram.ui.SMSSubscribeSheet;
 import java.io.File;
 
 public class ApplicationLoaderImpl extends ApplicationLoader {
+    private static final PushListenerController.IPushListenerServiceProvider NO_GOOGLE_PUSH_PROVIDER =
+            new PushListenerController.IPushListenerServiceProvider() {
+                @Override
+                public boolean hasServices() {
+                    return false;
+                }
+
+                @Override
+                public String getLogTitle() {
+                    return "No Google push service";
+                }
+
+                @Override
+                public void onRequestPushToken() {
+                    SharedConfig.pushStringStatus = "__NO_GOOGLE_PUSH__";
+                    PushListenerController.sendRegistrationToServer(getPushType(), null);
+                }
+
+                @Override
+                public int getPushType() {
+                    return PushListenerController.PUSH_TYPE_FIREBASE;
+                }
+            };
+
+    @Override
+    protected PushListenerController.IPushListenerServiceProvider onCreatePushProvider() {
+        return NO_GOOGLE_PUSH_PROVIDER;
+    }
+
     @Override
     protected String onGetApplicationId() {
         return BuildConfig.APPLICATION_ID;
