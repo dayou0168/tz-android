@@ -58,6 +58,25 @@ def main() -> None:
 
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
     require('<string name="AppName">TZ</string>' in strings, "TZ app name is missing")
+
+    standalone_gradle = read("TMessagesProj_AppStandalone/build.gradle")
+    require('project.hasProperty("TZ_NO_GOOGLE")' in standalone_gradle, "No-Google Gradle gate is missing")
+    standalone_loader = read(
+        "TMessagesProj_AppStandalone/src/main/java/org/telegram/messenger/ApplicationLoaderImpl.java"
+    )
+    require("NO_GOOGLE_PUSH_PROVIDER" in standalone_loader, "No-Google push provider is missing")
+    standalone_manifest = read("TMessagesProj_AppStandalone/src/main/AndroidManifest.xml")
+    require(
+        'android:name="org.telegram.messenger.GcmPushListenerService"' in standalone_manifest
+        and 'tools:node="remove"' in standalone_manifest,
+        "FCM manifest removal gate is missing",
+    )
+    workflow = read(".github/workflows/tz-android-build.yml")
+    require(
+        ":TMessagesProj_AppStandalone:assembleAfatDebug" in workflow
+        and "-PTZ_NO_GOOGLE=true" in workflow,
+        "CI is not building the no-Google Standalone variant",
+    )
     print("TZ Android source verification passed")
 
 

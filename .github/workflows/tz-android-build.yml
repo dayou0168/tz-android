@@ -61,12 +61,15 @@ jobs:
       - name: Render private API credentials
         run: python3 scripts/tz_android_render_build_vars.py
 
-      - name: Build debug APK
+      - name: Build no-Google debug APK
         shell: bash
         run: |
           set -euo pipefail
           chmod +x gradlew
-          ./gradlew :TMessagesProj_App:assembleAfatDebug --no-daemon --stacktrace
+          ./gradlew :TMessagesProj_AppStandalone:assembleAfatDebug \
+            -PTZ_NO_GOOGLE=true \
+            --no-daemon \
+            --stacktrace
 
       - name: Collect APK and provenance
         shell: bash
@@ -74,7 +77,7 @@ jobs:
           set -euo pipefail
           output="$RUNNER_TEMP/tz-android-apk"
           mkdir -p "$output"
-          find TMessagesProj_App/build/outputs/apk -type f -name '*.apk' -exec cp {} "$output/" \;
+          find TMessagesProj_AppStandalone/build/outputs/apk -type f -name '*.apk' -exec cp {} "$output/" \;
           test -n "$(find "$output" -maxdepth 1 -type f -name '*.apk' -print -quit)"
           cp TZ_ANDROID_UPSTREAM.lock "$output/"
           (cd "$output" && sha256sum *.apk > SHA256SUMS.txt)
@@ -82,7 +85,7 @@ jobs:
       - name: Upload APK candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: TZ-Android-1.0.0-debug
+          name: TZ-Android-1.0.0-no-google-debug
           path: ${{ runner.temp }}/tz-android-apk
           if-no-files-found: error
           retention-days: 14
