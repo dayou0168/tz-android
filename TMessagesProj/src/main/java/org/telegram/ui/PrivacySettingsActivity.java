@@ -121,6 +121,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
     private int securitySectionRow;
     @Keep
     private int passwordRow;
+    private int loginPasswordRow;
     private int sessionsRow;
     @Keep
     private int passcodeRow;
@@ -467,6 +468,8 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                         })))
                         .setNegativeButton(getString(R.string.Cancel), null)
                         .show();
+            } else if (position == loginPasswordRow) {
+                presentFragment(new LoginPasswordChangeActivity());
             } else if (position == passwordRow) {
                 if (currentPassword == null) {
                     return;
@@ -710,6 +713,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
         rowCount = 0;
 
         securitySectionRow = rowCount++;
+        loginPasswordRow = rowCount++;
         passwordRow = rowCount++;
         autoDeleteMesages = rowCount++;
         passcodeRow = rowCount++;
@@ -1020,7 +1024,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
-            return position == passcodeRow || position == passwordRow || position == passkeysRow || position == blockedRow || position == sessionsRow || position == secretWebpageRow || position == webSessionsRow ||
+            return position == passcodeRow || position == loginPasswordRow || position == passwordRow || position == passkeysRow || position == blockedRow || position == sessionsRow || position == secretWebpageRow || position == webSessionsRow ||
                     position == groupsRow && !getContactsController().getLoadingPrivacyInfo(ContactsController.PRIVACY_RULES_TYPE_INVITE) ||
                     position == lastSeenRow && !getContactsController().getLoadingPrivacyInfo(ContactsController.PRIVACY_RULES_TYPE_LASTSEEN) ||
                     position == callsRow && !getContactsController().getLoadingPrivacyInfo(ContactsController.PRIVACY_RULES_TYPE_CALLS) ||
@@ -1336,6 +1340,8 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                         }
                         textCell2.setPrioritizeTitleOverValue(true);
                         textCell2.setTextAndSpoilersValueAndIcon(getString(R.string.EmailLogin), val, R.drawable.msg2_email, true);
+                    } else if (position == loginPasswordRow) {
+                        textCell2.setTextAndValueAndIcon(getString(R.string.TZChangeLoginPassword), "", true, R.drawable.menu_2sv, true);
                     } else if (position == passwordRow) {
                         value = "";
                         int icon = R.drawable.menu_2sv;
@@ -1401,7 +1407,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                 return 3;
             } else if (position == botsAndWebsitesShadowRow) {
                 return 4;
-            } else if (position == autoDeleteMesages || position == sessionsRow || position == emailLoginRow || position == passwordRow || position == passkeysRow || position == passcodeRow || position == blockedRow) {
+            } else if (position == autoDeleteMesages || position == sessionsRow || position == emailLoginRow || position == loginPasswordRow || position == passwordRow || position == passkeysRow || position == passcodeRow || position == blockedRow) {
                 return 5;
             }
             return 0;

@@ -6,6 +6,7 @@ import android.graphics.Paint;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.text.method.PasswordTransformationMethod;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -30,11 +31,16 @@ public class CodeFieldContainer extends LinearLayout {
     public boolean isFocusSuppressed;
 
     public CodeNumberField[] codeField;
+    private boolean passwordMode;
 
     public CodeFieldContainer(Context context) {
         super(context);
         paint.setStyle(Paint.Style.STROKE);
         setOrientation(HORIZONTAL);
+    }
+
+    public void setPasswordMode(boolean passwordMode) {
+        this.passwordMode = passwordMode;
     }
 
     @Override
@@ -108,6 +114,10 @@ public class CodeFieldContainer extends LinearLayout {
     }
 
     public void setNumbersCount(int length, int currentType) {
+        if (passwordMode) {
+            setPasswordField();
+            return;
+        }
         if (codeField == null || codeField.length != length) {
             if (codeField != null) {
                 for (CodeNumberField f : codeField) {
@@ -257,6 +267,28 @@ public class CodeFieldContainer extends LinearLayout {
         }
     }
 
+    private void setPasswordField() {
+        removeAllViews();
+        codeField = new CodeNumberField[1];
+        codeField[0] = new CodeNumberField(getContext());
+        codeField[0].setImeOptions(EditorInfo.IME_ACTION_DONE | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
+        codeField[0].setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+        codeField[0].setMaxLines(1);
+        codeField[0].setSingleLine(true);
+        codeField[0].setPadding(AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12), 0);
+        codeField[0].setGravity(Gravity.CENTER_VERTICAL);
+        codeField[0].setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        codeField[0].setTransformationMethod(PasswordTransformationMethod.getInstance());
+        codeField[0].setOnEditorActionListener((textView, actionId, keyEvent) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                processNextPressed();
+                return true;
+            }
+            return false;
+        });
+        addView(codeField[0], LayoutHelper.createLinear(280, 42, Gravity.CENTER_HORIZONTAL));
+    }
+
     protected void processNextPressed() {
 
     }
@@ -264,6 +296,9 @@ public class CodeFieldContainer extends LinearLayout {
     public String getCode() {
         if (codeField == null) {
             return "";
+        }
+        if (passwordMode) {
+            return codeField[0].getText().toString();
         }
         StringBuilder codeBuilder = new StringBuilder();
         for (int a = 0; a < codeField.length; a++) {
@@ -282,6 +317,11 @@ public class CodeFieldContainer extends LinearLayout {
 
     public void setText(String code, boolean fromPaste) {
         if (codeField == null) {
+            return;
+        }
+        if (passwordMode) {
+            codeField[0].setText(code);
+            codeField[0].setSelection(codeField[0].length());
             return;
         }
         int startFrom = 0;

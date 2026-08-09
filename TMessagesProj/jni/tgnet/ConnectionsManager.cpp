@@ -1814,7 +1814,10 @@ uint8_t ConnectionsManager::getIpStratagy() {
 void ConnectionsManager::initDatacenters() {
     if (datacenters.find(2) == datacenters.end()) {
         auto datacenter = new Datacenter(instanceNum, 2);
-        datacenter->addAddressAndPort("tztg.tianze8.cc", 2398, 0, "");
+        // gramsrv exposes one fixed MTProto endpoint.  Mark it static so the
+        // Android retry loop never falls back to Telegram's 443/5222 ports,
+        // and tcpo_only so the route matches the desktop/iOS clients.
+        datacenter->addAddressAndPort("tztg.tianze8.cc", 2398, TcpAddressFlagStatic | TcpAddressFlagO, "");
         datacenters[2] = datacenter;
     }
 }

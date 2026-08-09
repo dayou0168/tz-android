@@ -1898,6 +1898,10 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         if (res.type instanceof TLRPC.TL_auth_sentCodeTypeApp) {
             params.putInt("type", AUTH_TYPE_MESSAGE);
             params.putInt("length", res.type.length);
+            // gramsrv deliberately represents its account-password challenge
+            // as sentCodeTypeApp(length: 8).  Preserve Telegram's regular app
+            // code behavior for every other length.
+            params.putBoolean("tzLoginPassword", res.type.length == 8);
             setPage(VIEW_CODE_MESSAGE, animate, params, false);
         } else {
             if (res.timeout == 0) {
@@ -3614,6 +3618,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         private String prefix = "";
         private String catchedPhone;
         private int length;
+        private boolean tzLoginPassword;
         private String url;
 
         private Bundle nextCodeParams;
@@ -4149,7 +4154,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
         @Override
         public boolean hasCustomKeyboard() {
-            return currentType != AUTH_TYPE_FLASH_CALL;
+            return !tzLoginPassword && currentType != AUTH_TYPE_FLASH_CALL;
         }
 
         @Override
@@ -4343,6 +4348,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             pattern = params.getString("pattern");
             prefix = params.getString("prefix");
             length = params.getInt("length");
+            tzLoginPassword = params.getBoolean("tzLoginPassword", false);
             prevType = params.getInt("prevType", 0);
             if (length == 0) {
                 length = 5;
@@ -4352,7 +4358,9 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             nextCodeParams = null;
             nextCodeAuth = null;
 
-            codeFieldContainer.setNumbersCount(length, currentType);
+            codeFieldContainer.setPasswordMode(tzLoginPassword);
+            codeFieldContainer.setNumbersCount(tzLoginPassword ? 1 : length, currentType);
+            wrongCode.setText(tzLoginPassword ? getString(R.string.CheckPasswordWrong) : getString(R.string.WrongCode));
             for (CodeNumberField f : codeFieldContainer.codeField) {
                 f.setShowSoftInputOnFocusCompat(!(hasCustomKeyboard() && !isCustomKeyboardForceDisabled()));
                 f.addTextChangedListener(new TextWatcher() {
@@ -4412,7 +4420,10 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 }
                 str = spanned;
             } else {
-                if (currentType == AUTH_TYPE_MESSAGE) {
+                if (tzLoginPassword) {
+                    str = getString(R.string.PleaseEnterCurrentPassword);
+                    titleTextView.setText(getString(R.string.LoginPassword));
+                } else if (currentType == AUTH_TYPE_MESSAGE) {
                     str = AndroidUtilities.replaceTags(LocaleController.formatString("SentAppCodeWithPhone", R.string.SentAppCodeWithPhone, LocaleController.addNbsp(number)));
                 } else if (currentType == AUTH_TYPE_SMS) {
                     str = AndroidUtilities.replaceTags(LocaleController.formatString("SentSmsCode", R.string.SentSmsCode, LocaleController.addNbsp(number)));
@@ -4453,7 +4464,13 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             destroyCodeTimer();
 
             lastCurrentTime = System.currentTimeMillis();
-            if (currentType == AUTH_TYPE_MESSAGE) {
+            if (tzLoginPassword) {
+                setProblemTextVisible(false);
+                timeText.setVisibility(GONE);
+                if (problemText != null) {
+                    problemText.setVisibility(GONE);
+                }
+            } else if (currentType == AUTH_TYPE_MESSAGE) {
                 setProblemTextVisible(true);
                 timeText.setVisibility(GONE);
                 if (problemText != null) {
@@ -4700,6 +4717,10 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 code = codeFieldContainer.getCode();
             }
             if (TextUtils.isEmpty(code)) {
+                onFieldError(codeFieldContainer, false);
+                return;
+            }
+            if (tzLoginPassword && code.length() < 8) {
                 onFieldError(codeFieldContainer, false);
                 return;
             }
