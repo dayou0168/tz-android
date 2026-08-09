@@ -11167,4 +11167,7 @@
     <string name="ArticleAIPrompt">Write a prompt...</string>
     <string name="ArticleAIGenerate">Generate</string>
     <string name="ArticleAIAddToPage">Add to Page</string>
+    <string name="TZChangeLoginPassword">Change Login Password</string>
+    <string name="TZLoginPasswordMinLength">Enter your current password and a new password of at least 8 characters.</string>
+    <string name="TZLoginPasswordChanged">Your login password has been changed.</string>
 </resources>

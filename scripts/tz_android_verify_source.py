@@ -52,8 +52,8 @@ def main() -> None:
     require("0x9aad92cdbb09df34" in handshake, "TZ RSA fingerprint is missing")
 
     properties = read("gradle.properties")
-    require("APP_VERSION_CODE=100001" in properties, "Unexpected TZ version code")
-    require("APP_VERSION_NAME=1.0.0" in properties, "Unexpected TZ version name")
+    require("APP_VERSION_CODE=100004" in properties, "Unexpected TZ version code")
+    require("APP_VERSION_NAME=1.0.4" in properties, "Unexpected TZ version name")
     require("APP_PACKAGE=com.tianze.tz" in properties, "Unexpected TZ package ID")
 
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
@@ -73,7 +73,7 @@ def main() -> None:
     )
     workflow = read(".github/workflows/tz-android-build.yml")
     require(
-        ":TMessagesProj_AppStandalone:assembleAfatDebug" in workflow
+        ":TMessagesProj_AppStandalone:assembleAfatStandalone" in workflow
         and "-PTZ_NO_GOOGLE=true" in workflow,
         "CI is not building the no-Google Standalone variant",
     )
