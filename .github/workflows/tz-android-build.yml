@@ -7,7 +7,7 @@ on:
       - codex/bootstrap-tz-android
       - main
     tags:
-      - "1.0.6"
+      - "1.0.7"
 
 permissions:
   contents: write
@@ -85,14 +85,14 @@ jobs:
           unzip -p "$apk" 'lib/*/libtmessages*.so' | strings > "$RUNNER_TEMP/tz-native-strings.txt"
           grep -Fq 'tztg.tianze8.cc' "$RUNNER_TEMP/tz-native-strings.txt"
           grep -Fq 'MIIBCgKCAQEA7lyx4eQO/cyY9icmLgUQ2nxZ++xP+q1AQEfCRSvilbS72Qvyj/dJ' "$RUNNER_TEMP/tz-native-strings.txt"
-          cp "$apk" "$output/TZ-Android-1.0.6.apk"
+          cp "$apk" "$output/TZ-Android-1.0.7.apk"
           cp TZ_ANDROID_UPSTREAM.lock "$output/"
           (cd "$output" && sha256sum *.apk > SHA256SUMS.txt)
 
       - name: Upload APK candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: TZ-Android-1.0.6-no-google
+          name: TZ-Android-1.0.7-no-google
           path: ${{ runner.temp }}/tz-android-apk
           if-no-files-found: error
           retention-days: 14
@@ -107,5 +107,5 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" "$RUNNER_TEMP"/tz-android-apk/* \
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
-            --title "TZ Android 1.0.6" \
-            --notes "TZ Android 1.0.6：修复静态 DC 自定义端口被错误替换成默认 443 的问题，确保普通连接实际使用 tztg.tianze8.cc:2398；保留 DC2 缓存清理、gramsrv RSA、tz:// 邀请链接、Full LTO 与无 Google 服务构建。"
+            --title "TZ Android 1.0.7" \
+            --notes "TZ Android 1.0.7：修复普通 MTProto 直连只接受数字 IP、无法解析 tztg.tianze8.cc 的问题；继续固定使用 DC2、TCP 端口 2398、gramsrv RSA、tz:// 邀请链接、Full LTO 和无 Google 服务构建。"

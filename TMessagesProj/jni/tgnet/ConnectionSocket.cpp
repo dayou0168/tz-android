@@ -584,9 +584,27 @@ void ConnectionSocket::openConnection(std::string address, uint16_t port, std::s
             socketAddress.sin_family = AF_INET;
             socketAddress.sin_port = htons(port);
             if (inet_pton(AF_INET, address.c_str(), &socketAddress.sin_addr.s_addr) != 1) {
-                if (LOGS_ENABLED) DEBUG_E("connection(%p) bad ipv4 %s", this, address.c_str());
-                closeSocket(1, -1);
+                if (LOGS_ENABLED) DEBUG_D("connection(%p) resolving direct host %s", this, address.c_str());
+#ifdef USE_DELEGATE_HOST_RESOLVE
+                waitingForHostResolve = address;
+                ConnectionsManager::getInstance(instanceNum).delegate->getHostByName(address, instanceNum, this);
                 return;
+#else
+                struct hostent *he;
+                if ((he = gethostbyname(address.c_str())) == nullptr) {
+                    if (LOGS_ENABLED) DEBUG_E("connection(%p) can't resolve direct host %s", this, address.c_str());
+                    closeSocket(1, -1);
+                    return;
+                }
+                struct in_addr **addr_list = (struct in_addr **) he->h_addr_list;
+                if (addr_list[0] == nullptr) {
+                    if (LOGS_ENABLED) DEBUG_E("connection(%p) direct host %s has no IPv4 address", this, address.c_str());
+                    closeSocket(1, -1);
+                    return;
+                }
+                socketAddress.sin_addr.s_addr = addr_list[0]->s_addr;
+                if (LOGS_ENABLED) DEBUG_D("connection(%p) resolved direct host %s address %x", this, address.c_str(), addr_list[0]->s_addr);
+#endif
             }
         }
         uint32_t tempBuffLength;

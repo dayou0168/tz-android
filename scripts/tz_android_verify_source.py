@@ -62,8 +62,8 @@ def main() -> None:
     require("0x9aad92cdbb09df34" in handshake, "TZ RSA fingerprint is missing")
 
     properties = read("gradle.properties")
-    require("APP_VERSION_CODE=100006" in properties, "Unexpected TZ version code")
-    require("APP_VERSION_NAME=1.0.6" in properties, "Unexpected TZ version name")
+    require("APP_VERSION_CODE=100007" in properties, "Unexpected TZ version code")
+    require("APP_VERSION_NAME=1.0.7" in properties, "Unexpected TZ version name")
     require("APP_PACKAGE=com.tianze.tz" in properties, "Unexpected TZ package ID")
 
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
@@ -83,6 +83,13 @@ def main() -> None:
             connection,
         ) is not None,
         "static DC endpoints do not force their explicit custom port",
+    )
+
+    connection_socket = read("TMessagesProj/jni/tgnet/ConnectionSocket.cpp")
+    require(
+        "waitingForHostResolve = address" in connection_socket
+        and "delegate->getHostByName(address, instanceNum, this)" in connection_socket,
+        "direct DC hostnames are not resolved before opening the socket",
     )
 
     standalone_gradle = read("TMessagesProj_AppStandalone/build.gradle")
