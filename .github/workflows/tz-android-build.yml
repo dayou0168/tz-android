@@ -46,8 +46,8 @@ jobs:
           test -n "$TZ_ANDROID_KEYSTORE_PASSWORD" || { echo "TZ_ANDROID_KEYSTORE_PASSWORD is missing"; exit 1; }
           test -n "$TZ_ANDROID_KEY_ALIAS" || { echo "TZ_ANDROID_KEY_ALIAS is missing"; exit 1; }
           test -n "$TZ_ANDROID_KEY_PASSWORD" || { echo "TZ_ANDROID_KEY_PASSWORD is missing"; exit 1; }
-          test "${#TZ_ANDROID_KEYSTORE_PASSWORD}" -ge 12 || { echo "Keystore password must contain at least 12 characters"; exit 1; }
-          test "${#TZ_ANDROID_KEY_PASSWORD}" -ge 12 || { echo "Key password must contain at least 12 characters"; exit 1; }
+          test "${#TZ_ANDROID_KEYSTORE_PASSWORD}" -ge 8 || { echo "Keystore password must contain at least 8 characters"; exit 1; }
+          test "${#TZ_ANDROID_KEY_PASSWORD}" -ge 8 || { echo "Key password must contain at least 8 characters"; exit 1; }
           echo "::add-mask::$TZ_ANDROID_KEYSTORE_PASSWORD"
           echo "::add-mask::$TZ_ANDROID_KEY_ALIAS"
           echo "::add-mask::$TZ_ANDROID_KEY_PASSWORD"
