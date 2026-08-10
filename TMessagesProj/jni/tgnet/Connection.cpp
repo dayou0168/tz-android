@@ -346,7 +346,10 @@ void Connection::connect() {
         hostAddress = tcpAddress->address;
         secret = tcpAddress->secret;
     }
-    if (tcpAddress != nullptr && isStatic) {
+    // A DC endpoint marked static carries an explicit port.  The upstream
+    // path only honored it for proxy connections (isStatic), which silently
+    // changed TZ's 2398 endpoint to Telegram's rotating default ports.
+    if (tcpAddress != nullptr && (isStatic || (tcpAddress->flags & TcpAddressFlagStatic) != 0)) {
         hostPort = (uint16_t) tcpAddress->port;
     } else {
         hostPort = (uint16_t) currentDatacenter->getCurrentPort(currentAddressFlags);

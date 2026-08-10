@@ -62,8 +62,8 @@ def main() -> None:
     require("0x9aad92cdbb09df34" in handshake, "TZ RSA fingerprint is missing")
 
     properties = read("gradle.properties")
-    require("APP_VERSION_CODE=100005" in properties, "Unexpected TZ version code")
-    require("APP_VERSION_NAME=1.0.5" in properties, "Unexpected TZ version name")
+    require("APP_VERSION_CODE=100006" in properties, "Unexpected TZ version code")
+    require("APP_VERSION_NAME=1.0.6" in properties, "Unexpected TZ version name")
     require("APP_PACKAGE=com.tianze.tz" in properties, "Unexpected TZ package ID")
 
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
@@ -74,6 +74,16 @@ def main() -> None:
     launch = read("TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java")
     require('case "tz":' in launch and 'url = "tg" + url.substring(scheme.length())' in launch,
             "TZ deep links are not normalized into the internal Telegram URL parser")
+
+    connection = read("TMessagesProj/jni/tgnet/Connection.cpp")
+    require(
+        re.search(
+            r"tcpAddress\s*!=\s*nullptr\s*&&\s*\(isStatic\s*\|\|\s*"
+            r"\(tcpAddress->flags\s*&\s*TcpAddressFlagStatic\)\s*!=\s*0\)",
+            connection,
+        ) is not None,
+        "static DC endpoints do not force their explicit custom port",
+    )
 
     standalone_gradle = read("TMessagesProj_AppStandalone/build.gradle")
     require('project.hasProperty("TZ_NO_GOOGLE")' in standalone_gradle, "No-Google Gradle gate is missing")
