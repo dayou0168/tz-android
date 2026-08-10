@@ -42,8 +42,18 @@ def main() -> None:
     )
     require(init_match is not None, "Could not find initDatacenters")
     body = init_match.group("body")
-    require('addAddressAndPort("tztg.tianze8.cc", 2398' in body, "TZ endpoint is missing")
-    require(body.count("addAddressAndPort(") == 1, "Unexpected additional bootstrap datacenter endpoints")
+    require('tzAddresses.emplace_back("tztg.tianze8.cc", 2398' in body, "TZ endpoint is missing")
+    require(body.count("emplace_back(") == 1, "Unexpected additional bootstrap datacenter endpoints")
+    require("datacenter->replaceAddresses(tzAddresses, 0)" in body, "TZ DC2 is not normalized")
+    require("datacenter->replaceAddresses(emptyAddresses, TcpAddressFlagIpv6)" in body,
+            "stale IPv6 DC addresses are not cleared")
+    require("datacenter->replaceAddresses(emptyAddresses, TcpAddressFlagDownload)" in body,
+            "stale media DC addresses are not cleared")
+    require("datacenter->replaceAddresses(emptyAddresses, TcpAddressFlagDownload | TcpAddressFlagIpv6)" in body,
+            "stale IPv6 media DC addresses are not cleared")
+    require("datacenter->replaceAddresses(emptyAddresses, TcpAddressFlagTemp)" in body,
+            "stale temporary DC addresses are not cleared")
+    require("datacenter->resetAddressAndPortNum()" in body, "TZ DC address cursor is not reset")
 
     handshake = read("TMessagesProj/jni/tgnet/Handshake.cpp")
     datacenter = read("TMessagesProj/jni/tgnet/Datacenter.cpp")
@@ -52,12 +62,18 @@ def main() -> None:
     require("0x9aad92cdbb09df34" in handshake, "TZ RSA fingerprint is missing")
 
     properties = read("gradle.properties")
-    require("APP_VERSION_CODE=100004" in properties, "Unexpected TZ version code")
-    require("APP_VERSION_NAME=1.0.4" in properties, "Unexpected TZ version name")
+    require("APP_VERSION_CODE=100005" in properties, "Unexpected TZ version code")
+    require("APP_VERSION_NAME=1.0.5" in properties, "Unexpected TZ version name")
     require("APP_PACKAGE=com.tianze.tz" in properties, "Unexpected TZ package ID")
 
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
     require('<string name="AppName">TZ</string>' in strings, "TZ app name is missing")
+
+    manifest = read("TMessagesProj/src/main/AndroidManifest.xml")
+    require('<data android:scheme="tz" />' in manifest, "TZ deep-link scheme is not registered")
+    launch = read("TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java")
+    require('case "tz":' in launch and 'url = "tg" + url.substring(scheme.length())' in launch,
+            "TZ deep links are not normalized into the internal Telegram URL parser")
 
     standalone_gradle = read("TMessagesProj_AppStandalone/build.gradle")
     require('project.hasProperty("TZ_NO_GOOGLE")' in standalone_gradle, "No-Google Gradle gate is missing")
