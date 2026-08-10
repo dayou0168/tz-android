@@ -7,7 +7,7 @@ on:
       - codex/bootstrap-tz-android
       - main
     tags:
-      - "1.0.4"
+      - "1.0.5"
 
 permissions:
   contents: write
@@ -82,14 +82,17 @@ jobs:
           mkdir -p "$output"
           apk="$(find TMessagesProj_AppStandalone/build/outputs/apk -type f -name '*.apk' -print -quit)"
           test -n "$apk"
-          cp "$apk" "$output/TZ-Android-1.0.4.apk"
+          unzip -p "$apk" 'lib/*/libtmessages*.so' | strings > "$RUNNER_TEMP/tz-native-strings.txt"
+          grep -Fq 'tztg.tianze8.cc' "$RUNNER_TEMP/tz-native-strings.txt"
+          grep -Fq 'MIIBCgKCAQEA7lyx4eQO/cyY9icmLgUQ2nxZ++xP+q1AQEfCRSvilbS72Qvyj/dJ' "$RUNNER_TEMP/tz-native-strings.txt"
+          cp "$apk" "$output/TZ-Android-1.0.5.apk"
           cp TZ_ANDROID_UPSTREAM.lock "$output/"
           (cd "$output" && sha256sum *.apk > SHA256SUMS.txt)
 
       - name: Upload APK candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: TZ-Android-1.0.4-no-google
+          name: TZ-Android-1.0.5-no-google
           path: ${{ runner.temp }}/tz-android-apk
           if-no-files-found: error
           retention-days: 14
@@ -104,5 +107,5 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" "$RUNNER_TEMP"/tz-android-apk/* \
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
-            --title "TZ Android 1.0.4" \
-            --notes "TZ Android 1.0.4：修复 tztg.tianze8.cc 固定 TCP 连接与账号密码登录，新增登录密码修改入口，并兼容服务端共享媒体数量文本修复。无 Google 服务构建。"
+            --title "TZ Android 1.0.5" \
+            --notes "TZ Android 1.0.5：每次启动强制规范化 DC2，清除旧版本缓存的官方、临时、IPv6 和媒体地址，只使用 tztg.tianze8.cc:2398；继续使用 gramsrv 配套 RSA 公钥和无 Google 服务构建。"

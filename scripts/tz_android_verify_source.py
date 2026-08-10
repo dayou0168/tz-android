@@ -42,8 +42,18 @@ def main() -> None:
     )
     require(init_match is not None, "Could not find initDatacenters")
     body = init_match.group("body")
-    require('addAddressAndPort("tztg.tianze8.cc", 2398' in body, "TZ endpoint is missing")
-    require(body.count("addAddressAndPort(") == 1, "Unexpected additional bootstrap datacenter endpoints")
+    require('tzAddresses.emplace_back("tztg.tianze8.cc", 2398' in body, "TZ endpoint is missing")
+    require(body.count("emplace_back(") == 1, "Unexpected additional bootstrap datacenter endpoints")
+    require("datacenter->replaceAddresses(tzAddresses, 0)" in body, "TZ DC2 is not normalized")
+    require("datacenter->replaceAddresses(emptyAddresses, TcpAddressFlagIpv6)" in body,
+            "stale IPv6 DC addresses are not cleared")
+    require("datacenter->replaceAddresses(emptyAddresses, TcpAddressFlagDownload)" in body,
+            "stale media DC addresses are not cleared")
+    require("datacenter->replaceAddresses(emptyAddresses, TcpAddressFlagDownload | TcpAddressFlagIpv6)" in body,
+            "stale IPv6 media DC addresses are not cleared")
+    require("datacenter->replaceAddresses(emptyAddresses, TcpAddressFlagTemp)" in body,
+            "stale temporary DC addresses are not cleared")
+    require("datacenter->resetAddressAndPortNum()" in body, "TZ DC address cursor is not reset")
 
     handshake = read("TMessagesProj/jni/tgnet/Handshake.cpp")
     datacenter = read("TMessagesProj/jni/tgnet/Datacenter.cpp")
@@ -52,8 +62,8 @@ def main() -> None:
     require("0x9aad92cdbb09df34" in handshake, "TZ RSA fingerprint is missing")
 
     properties = read("gradle.properties")
-    require("APP_VERSION_CODE=100004" in properties, "Unexpected TZ version code")
-    require("APP_VERSION_NAME=1.0.4" in properties, "Unexpected TZ version name")
+    require("APP_VERSION_CODE=100005" in properties, "Unexpected TZ version code")
+    require("APP_VERSION_NAME=1.0.5" in properties, "Unexpected TZ version name")
     require("APP_PACKAGE=com.tianze.tz" in properties, "Unexpected TZ package ID")
 
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
