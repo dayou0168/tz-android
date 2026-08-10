@@ -69,6 +69,12 @@ def main() -> None:
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
     require('<string name="AppName">TZ</string>' in strings, "TZ app name is missing")
 
+    manifest = read("TMessagesProj/src/main/AndroidManifest.xml")
+    require('<data android:scheme="tz" />' in manifest, "TZ deep-link scheme is not registered")
+    launch = read("TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java")
+    require('case "tz":' in launch and 'url = "tg" + url.substring(scheme.length())' in launch,
+            "TZ deep links are not normalized into the internal Telegram URL parser")
+
     standalone_gradle = read("TMessagesProj_AppStandalone/build.gradle")
     require('project.hasProperty("TZ_NO_GOOGLE")' in standalone_gradle, "No-Google Gradle gate is missing")
     standalone_loader = read(

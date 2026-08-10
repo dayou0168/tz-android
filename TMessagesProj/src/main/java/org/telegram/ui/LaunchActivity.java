@@ -2272,8 +2272,13 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                     }
                                     break;
                                 }
+                                case "tz":
                                 case "tg": {
                                     String url = data.toString();
+                                    if ("tz".equals(scheme)) {
+                                        url = "tg" + url.substring(scheme.length());
+                                        data = Uri.parse(url);
+                                    }
                                     if (url.startsWith("tg:premium_offer") || url.startsWith("tg://premium_offer")) {
                                         String finalUrl = url;
                                         AndroidUtilities.runOnUIThread(() -> {

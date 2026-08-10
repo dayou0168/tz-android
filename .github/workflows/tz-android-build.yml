@@ -108,4 +108,4 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
             --title "TZ Android 1.0.5" \
-            --notes "TZ Android 1.0.5：每次启动强制规范化 DC2，清除旧版本缓存的官方、临时、IPv6 和媒体地址，只使用 tztg.tianze8.cc:2398；继续使用 gramsrv 配套 RSA 公钥和无 Google 服务构建。"
+            --notes "TZ Android 1.0.5：每次启动强制规范化 DC2，清除旧版本缓存的官方、临时、IPv6 和媒体地址，只使用 tztg.tianze8.cc:2398；继续使用 gramsrv 配套 RSA 公钥和无 Google 服务构建；新增 tz:// 邀请链接注册与解析。"
