@@ -160,6 +160,23 @@ def main() -> None:
         and "-PTZ_NO_GOOGLE=true" in workflow,
         "CI is not building the no-Google Standalone variant",
     )
+    require(
+        "TZ_ANDROID_KEYSTORE_BASE64" in workflow
+        and "base64 --decode" in workflow
+        and "TZ_ANDROID_KEYSTORE_SHA256" in workflow
+        and "apksigner" in workflow,
+        "CI does not restore and verify the private Android signing key",
+    )
+    require(
+        subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "TMessagesProj/config/release.keystore"],
+            capture_output=True,
+            text=True,
+        ).returncode != 0,
+        "the Android release signing key must not be tracked by git",
+    )
+    require("TMessagesProj/config/release.keystore" in read(".gitignore"),
+            "the private Android signing key is not ignored")
     print("TZ Android source verification passed")
 
 

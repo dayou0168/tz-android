@@ -2,12 +2,6 @@ name: TZ Android APK
 
 on:
   workflow_dispatch:
-    inputs:
-      generate_signing_key:
-        description: "Generate the one-time TZ Android release signing key"
-        required: false
-        type: boolean
-        default: false
   push:
     branches:
       - codex/bootstrap-tz-android
@@ -23,77 +17,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  generate-signing-key:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.generate_signing_key }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    env:
-      TZ_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.TZ_ANDROID_KEYSTORE_PASSWORD }}
-      TZ_ANDROID_KEY_ALIAS: ${{ secrets.TZ_ANDROID_KEY_ALIAS }}
-      TZ_ANDROID_KEY_PASSWORD: ${{ secrets.TZ_ANDROID_KEY_PASSWORD }}
-
-    steps:
-      - name: Set up Java 17
-        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Validate signing secrets
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "$TZ_ANDROID_KEYSTORE_PASSWORD" || { echo "TZ_ANDROID_KEYSTORE_PASSWORD is missing"; exit 1; }
-          test -n "$TZ_ANDROID_KEY_ALIAS" || { echo "TZ_ANDROID_KEY_ALIAS is missing"; exit 1; }
-          test -n "$TZ_ANDROID_KEY_PASSWORD" || { echo "TZ_ANDROID_KEY_PASSWORD is missing"; exit 1; }
-          test "${#TZ_ANDROID_KEYSTORE_PASSWORD}" -ge 8 || { echo "Keystore password must contain at least 8 characters"; exit 1; }
-          test "${#TZ_ANDROID_KEY_PASSWORD}" -ge 8 || { echo "Key password must contain at least 8 characters"; exit 1; }
-          echo "::add-mask::$TZ_ANDROID_KEYSTORE_PASSWORD"
-          echo "::add-mask::$TZ_ANDROID_KEY_ALIAS"
-          echo "::add-mask::$TZ_ANDROID_KEY_PASSWORD"
-
-      - name: Generate private release signing key
-        shell: bash
-        run: |
-          set -euo pipefail
-          umask 077
-          output="$RUNNER_TEMP/tz-android-signing-key"
-          mkdir -p "$output"
-          keytool -genkeypair -noprompt \
-            -keystore "$output/TZ-Android-release.jks" \
-            -storetype JKS \
-            -storepass "$TZ_ANDROID_KEYSTORE_PASSWORD" \
-            -keypass "$TZ_ANDROID_KEY_PASSWORD" \
-            -alias "$TZ_ANDROID_KEY_ALIAS" \
-            -keyalg RSA \
-            -keysize 4096 \
-            -sigalg SHA256withRSA \
-            -validity 36500 \
-            -dname "CN=TZ Android, OU=TZ, O=Tianze, L=Beijing, ST=Beijing, C=CN"
-          keytool -list -v \
-            -keystore "$output/TZ-Android-release.jks" \
-            -storepass "$TZ_ANDROID_KEYSTORE_PASSWORD" \
-            -alias "$TZ_ANDROID_KEY_ALIAS" \
-            > "$output/CERTIFICATE.txt"
-          base64 -w 0 "$output/TZ-Android-release.jks" > "$output/TZ_ANDROID_KEYSTORE_BASE64.txt"
-          sha256sum "$output/TZ-Android-release.jks" > "$output/SHA256SUMS.txt"
-          chmod 600 "$output"/*
-
-      - name: Upload one-time private key backup
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: TZ-Android-signing-key-KEEP-PRIVATE
-          path: ${{ runner.temp }}/tz-android-signing-key
-          if-no-files-found: error
-          retention-days: 1
-
   build:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.generate_signing_key }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
       TZ_ANDROID_API_ID: ${{ secrets.TZ_ANDROID_API_ID }}
       TZ_ANDROID_API_HASH: ${{ secrets.TZ_ANDROID_API_HASH }}
+      TZ_ANDROID_KEYSTORE_BASE64: ${{ secrets.TZ_ANDROID_KEYSTORE_BASE64 }}
+      TZ_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.TZ_ANDROID_KEYSTORE_PASSWORD }}
+      TZ_ANDROID_KEY_ALIAS: ${{ secrets.TZ_ANDROID_KEY_ALIAS }}
+      TZ_ANDROID_KEY_PASSWORD: ${{ secrets.TZ_ANDROID_KEY_PASSWORD }}
+      TZ_ANDROID_KEYSTORE_SHA256: a2c539a25f5a52c13fbc10adba9e5cf49b7c65c5873aeb714aa40cc1cfdce6fa
+      TZ_ANDROID_CERT_SHA256: F7:7C:34:D2:85:28:09:74:BA:8D:19:55:F2:BB:94:74:3A:0A:AC:24:61:6D:97:DF:8B:A6:09:43:78:E0:11:16
 
     steps:
       - name: Check out source and submodules
@@ -108,8 +43,16 @@ jobs:
           set -euo pipefail
           test -n "$TZ_ANDROID_API_ID" || { echo "TZ_ANDROID_API_ID is missing"; exit 1; }
           test -n "$TZ_ANDROID_API_HASH" || { echo "TZ_ANDROID_API_HASH is missing"; exit 1; }
+          test -n "$TZ_ANDROID_KEYSTORE_BASE64" || { echo "TZ_ANDROID_KEYSTORE_BASE64 is missing"; exit 1; }
+          test -n "$TZ_ANDROID_KEYSTORE_PASSWORD" || { echo "TZ_ANDROID_KEYSTORE_PASSWORD is missing"; exit 1; }
+          test -n "$TZ_ANDROID_KEY_ALIAS" || { echo "TZ_ANDROID_KEY_ALIAS is missing"; exit 1; }
+          test -n "$TZ_ANDROID_KEY_PASSWORD" || { echo "TZ_ANDROID_KEY_PASSWORD is missing"; exit 1; }
           echo "::add-mask::$TZ_ANDROID_API_ID"
           echo "::add-mask::$TZ_ANDROID_API_HASH"
+          echo "::add-mask::$TZ_ANDROID_KEYSTORE_BASE64"
+          echo "::add-mask::$TZ_ANDROID_KEYSTORE_PASSWORD"
+          echo "::add-mask::$TZ_ANDROID_KEY_ALIAS"
+          echo "::add-mask::$TZ_ANDROID_KEY_PASSWORD"
 
       - name: Set up Java 17
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
@@ -117,6 +60,24 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: gradle
+
+      - name: Restore and verify private release signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          keystore="TMessagesProj/config/release.keystore"
+          printf '%s' "$TZ_ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          echo "$TZ_ANDROID_KEYSTORE_SHA256  $keystore" | sha256sum --check --strict
+          cert_sha256="$(keytool -list -v \
+            -keystore "$keystore" \
+            -storepass "$TZ_ANDROID_KEYSTORE_PASSWORD" \
+            -alias "$TZ_ANDROID_KEY_ALIAS" \
+            | sed -n 's/^[[:space:]]*SHA256: //p')"
+          test "$cert_sha256" = "$TZ_ANDROID_CERT_SHA256" || {
+            echo "Unexpected Android signing certificate fingerprint"
+            exit 1
+          }
 
       - name: Install pinned Android SDK components
         shell: bash
@@ -142,6 +103,9 @@ jobs:
           chmod +x gradlew
           ./gradlew :TMessagesProj_AppStandalone:assembleAfatStandalone \
             -PTZ_NO_GOOGLE=true \
+            -PRELEASE_STORE_PASSWORD="$TZ_ANDROID_KEYSTORE_PASSWORD" \
+            -PRELEASE_KEY_ALIAS="$TZ_ANDROID_KEY_ALIAS" \
+            -PRELEASE_KEY_PASSWORD="$TZ_ANDROID_KEY_PASSWORD" \
             --no-daemon \
             --stacktrace
 
@@ -156,6 +120,11 @@ jobs:
           unzip -p "$apk" 'lib/*/libtmessages*.so' | strings > "$RUNNER_TEMP/tz-native-strings.txt"
           grep -Fq 'tztg.tianze8.cc' "$RUNNER_TEMP/tz-native-strings.txt"
           grep -Fq 'MIIBCgKCAQEA7lyx4eQO/cyY9icmLgUQ2nxZ++xP+q1AQEfCRSvilbS72Qvyj/dJ' "$RUNNER_TEMP/tz-native-strings.txt"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify \
+            --verbose \
+            --print-certs \
+            "$apk" | tee "$RUNNER_TEMP/tz-apk-signature.txt"
+          grep -Fqi "Signer #1 certificate SHA-256 digest: ${TZ_ANDROID_CERT_SHA256//:/}" "$RUNNER_TEMP/tz-apk-signature.txt"
           cp "$apk" "$output/TZ-Android-1.0.7.apk"
           cp TZ_ANDROID_UPSTREAM.lock "$output/"
           (cd "$output" && sha256sum *.apk > SHA256SUMS.txt)
