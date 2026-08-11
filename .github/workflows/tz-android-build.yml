@@ -7,7 +7,7 @@ on:
       - codex/bootstrap-tz-android
       - main
     tags:
-      - "1.0.8"
+      - "1.0.9"
 
 permissions:
   contents: write
@@ -125,14 +125,14 @@ jobs:
             --print-certs \
             "$apk" | tee "$RUNNER_TEMP/tz-apk-signature.txt"
           grep -Fqi "Signer #1 certificate SHA-256 digest: ${TZ_ANDROID_CERT_SHA256//:/}" "$RUNNER_TEMP/tz-apk-signature.txt"
-          cp "$apk" "$output/TZ-Android-1.0.8.apk"
+          cp "$apk" "$output/TZ-Android-1.0.9.apk"
           cp TZ_ANDROID_UPSTREAM.lock "$output/"
           (cd "$output" && sha256sum *.apk > SHA256SUMS.txt)
 
       - name: Upload APK candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: TZ-Android-1.0.8-no-google
+          name: TZ-Android-1.0.9-no-google
           path: ${{ runner.temp }}/tz-android-apk
           if-no-files-found: error
           retention-days: 14
@@ -147,5 +147,5 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" "$RUNNER_TEMP"/tz-android-apk/* \
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
-            --title "TZ Android 1.0.8" \
-            --notes "TZ Android 1.0.8：修复 tg.tianze8.cc 公共分享链接在客户端内被误判为普通网页的问题。邀请链接（/+token）和用户名链接（/username）现在直接进入 TZ 内部解析流程，不再弹出内置浏览器；同时注册 Android HTTP/HTTPS 深链。首次安装默认使用内置的完整简体中文语言包，保留手动切换和服务端语言包更新能力。继续使用生产 DC2、匹配的 gramsrv RSA、TL Layer 228、密码登录、Full LTO、无 Google 服务和 TZ 私有签名。"
+            --title "TZ Android 1.0.9" \
+            --notes "TZ Android 1.0.9：完成客户端可见品牌文案的 TZ 化，补齐修改登录密码的简体中文文案，并为 tg.tianze8.cc 启用 Android App Links 验证标记。邀请链接和用户名链接继续直接进入 TZ；保留生产 DC2、gramsrv RSA、TL Layer 228、密码登录、Full LTO、无 Google 服务和 TZ 私有签名。"
