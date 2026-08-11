@@ -61,6 +61,8 @@ import java.util.regex.Pattern;
 
 public class Browser {
 
+    public static final String TZ_PUBLIC_LINK_HOST = "tg.tianze8.cc";
+
     private static WeakReference<CustomTabsSession> customTabsCurrentSession;
     private static CustomTabsSession customTabsSession;
     private static CustomTabsClient customTabsClient;
@@ -666,11 +668,16 @@ public class Browser {
     public static boolean isTMe(String url) {
         try {
             final String linkPrefix = MessagesController.getInstance(UserConfig.selectedAccount).linkPrefix;
-            return TextUtils.equals(AndroidUtilities.getHostAuthority(url), linkPrefix);
+            final String host = AndroidUtilities.getHostAuthority(url);
+            return TextUtils.equals(host, linkPrefix) || isTzPublicLinkHost(host);
         } catch (Exception e) {
             FileLog.e(e);
         }
         return false;
+    }
+
+    public static boolean isTzPublicLinkHost(String host) {
+        return TZ_PUBLIC_LINK_HOST.equalsIgnoreCase(host);
     }
 
     public static boolean isInternalUri(Uri uri, boolean[] forceBrowser) {
@@ -724,7 +731,7 @@ public class Browser {
                 }
                 return true;
             }
-        } else if ("telegram.me".equals(host) || "t.me".equals(host)) {
+        } else if ("telegram.me".equals(host) || "t.me".equals(host) || isTzPublicLinkHost(host)) {
             String path = uri.getPath();
             if (path != null && path.length() > 1) {
                 if (all) {

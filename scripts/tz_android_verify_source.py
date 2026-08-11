@@ -80,18 +80,47 @@ def main() -> None:
     require("0x9aad92cdbb09df34" in handshake, "TZ RSA fingerprint is missing")
 
     properties = read("gradle.properties")
-    require("APP_VERSION_CODE=100007" in properties, "Unexpected TZ version code")
-    require("APP_VERSION_NAME=1.0.7" in properties, "Unexpected TZ version name")
+    require("APP_VERSION_CODE=100008" in properties, "Unexpected TZ version code")
+    require("APP_VERSION_NAME=1.0.8" in properties, "Unexpected TZ version name")
     require("APP_PACKAGE=com.tianze.tz" in properties, "Unexpected TZ package ID")
 
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
     require('<string name="AppName">TZ</string>' in strings, "TZ app name is missing")
 
+    locale_controller = read("TMessagesProj/src/main/java/org/telegram/messenger/LocaleController.java")
+    require(
+        'TZ_DEFAULT_LANGUAGE = "zh_hans"' in locale_controller
+        and 'TZ_DEFAULT_LANGUAGE_ASSET = "tz/remote_zh_hans.xml"' in locale_controller
+        and "currentInfo = defaultSimplifiedChinese;" in locale_controller
+        and "seedBundledSimplifiedChinese(defaultSimplifiedChinese);" in locale_controller,
+        "Simplified Chinese is not the first-install default language",
+    )
+    bundled_chinese = read("TMessagesProj/src/main/assets/tz/remote_zh_hans.xml")
+    require(
+        bundled_chinese.startswith('<?xml version="1.0" encoding="utf-8"?>')
+        and "Telegram Android zh-hans v59926883" in bundled_chinese
+        and bundled_chinese.count("<string name=") == 11003
+        and '<string name="AppName">TZ</string>' in bundled_chinese,
+        "bundled Simplified Chinese language pack is incomplete",
+    )
+
     manifest = read("TMessagesProj/src/main/AndroidManifest.xml")
     require('<data android:scheme="tz" />' in manifest, "TZ deep-link scheme is not registered")
+    require(
+        '<data android:host="tg.tianze8.cc" android:scheme="http" />' in manifest
+        and '<data android:host="tg.tianze8.cc" android:scheme="https" />' in manifest,
+        "TZ public HTTP deep-link host is not registered",
+    )
     launch = read("TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java")
     require('case "tz":' in launch and 'url = "tg" + url.substring(scheme.length())' in launch,
             "TZ deep links are not normalized into the internal Telegram URL parser")
+    browser = read("TMessagesProj/src/main/java/org/telegram/messenger/browser/Browser.java")
+    require(
+        'TZ_PUBLIC_LINK_HOST = "tg.tianze8.cc"' in browser
+        and "isTzPublicLinkHost(host)" in browser
+        and "Browser.isTzPublicLinkHost(host)" in launch,
+        "TZ public links are not routed through the internal Telegram parser",
+    )
 
     connection = read("TMessagesProj/jni/tgnet/Connection.cpp")
     require(

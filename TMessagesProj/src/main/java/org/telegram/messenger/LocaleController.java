@@ -47,6 +47,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
+import java.io.InputStream;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -59,6 +60,10 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 public class LocaleController {
+
+    private static final String TZ_DEFAULT_LANGUAGE = "zh_hans";
+    private static final String TZ_DEFAULT_LANGUAGE_ASSET = "tz/remote_zh_hans.xml";
+    private static final int TZ_DEFAULT_LANGUAGE_VERSION = 59926883;
 
     static final int QUANTITY_OTHER = 0x0000;
     static final int QUANTITY_ZERO = 0x0001;
@@ -722,6 +727,24 @@ public class LocaleController {
             }
         }
 
+        LocaleInfo defaultSimplifiedChinese = getLanguageFromDict(TZ_DEFAULT_LANGUAGE);
+        if (defaultSimplifiedChinese == null) {
+            defaultSimplifiedChinese = new LocaleInfo();
+            defaultSimplifiedChinese.name = "简体中文";
+            defaultSimplifiedChinese.nameEnglish = "Chinese (Simplified)";
+            defaultSimplifiedChinese.shortName = TZ_DEFAULT_LANGUAGE;
+            defaultSimplifiedChinese.pluralLangCode = "zh";
+            defaultSimplifiedChinese.baseLangCode = "";
+            defaultSimplifiedChinese.pathToFile = "remote";
+            defaultSimplifiedChinese.version = TZ_DEFAULT_LANGUAGE_VERSION;
+            defaultSimplifiedChinese.serverIndex = Integer.MAX_VALUE;
+            languages.add(defaultSimplifiedChinese);
+            languagesDict.put(defaultSimplifiedChinese.getKey(), defaultSimplifiedChinese);
+            remoteLanguages.add(defaultSimplifiedChinese);
+            remoteLanguagesDict.put(defaultSimplifiedChinese.getKey(), defaultSimplifiedChinese);
+        }
+        seedBundledSimplifiedChinese(defaultSimplifiedChinese);
+
         systemDefaultLocale = Locale.getDefault();
         is24HourFormat = DateFormat.is24HourFormat(ApplicationLoader.applicationContext);
         LocaleInfo currentInfo = null;
@@ -735,6 +758,9 @@ public class LocaleController {
                 if (currentInfo != null) {
                     override = true;
                 }
+            } else {
+                currentInfo = defaultSimplifiedChinese;
+                override = true;
             }
 
             if (currentInfo == null && systemDefaultLocale.getLanguage() != null) {
@@ -764,6 +790,25 @@ public class LocaleController {
         }
 
         AndroidUtilities.runOnUIThread(() -> currentSystemLocale = getSystemLocaleStringIso639());
+    }
+
+    private void seedBundledSimplifiedChinese(LocaleInfo localeInfo) {
+        if (localeInfo == null || !localeInfo.isRemote()) {
+            return;
+        }
+        File target = localeInfo.getPathToFile();
+        if (target.exists()) {
+            return;
+        }
+        try (InputStream source = ApplicationLoader.applicationContext.getAssets().open(TZ_DEFAULT_LANGUAGE_ASSET)) {
+            if (!AndroidUtilities.copyFile(source, target)) {
+                throw new IllegalStateException("could not copy bundled Simplified Chinese language pack");
+            }
+            localeInfo.version = TZ_DEFAULT_LANGUAGE_VERSION;
+            saveOtherLanguages();
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
     }
 
     public static String getLanguageFlag(String countryCode) {
