@@ -11170,5 +11170,4 @@
     <string name="TZChangeLoginPassword">Change Login Password</string>
     <string name="TZLoginPasswordMinLength">Enter your current login password and a new login password of at least 8 characters.</string>
     <string name="TZLoginPasswordChanged">Your login password was changed. It is separate from Two-Step Verification.</string>
-    <string name="TZLoginPasswordChanged">Your login password has been changed.</string>
 </resources>

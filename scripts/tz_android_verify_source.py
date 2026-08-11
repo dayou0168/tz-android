@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
@@ -23,6 +24,10 @@ def read(path: str) -> str:
 
 
 def main() -> None:
+    for strings_path in Path("TMessagesProj/src/main/res").glob("values*/strings.xml"):
+        names = [item.get("name") for item in ET.parse(strings_path).getroot() if item.get("name")]
+        require(len(names) == len(set(names)), f"Duplicate Android resource name in {strings_path}")
+
     lock = json.loads(read("TZ_ANDROID_UPSTREAM.lock"))
     require(lock.get("commit") == EXPECTED_UPSTREAM, "Unexpected upstream commit in lock file")
 
