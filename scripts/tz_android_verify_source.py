@@ -80,8 +80,8 @@ def main() -> None:
     require("0x9aad92cdbb09df34" in handshake, "TZ RSA fingerprint is missing")
 
     properties = read("gradle.properties")
-    require("APP_VERSION_CODE=100008" in properties, "Unexpected TZ version code")
-    require("APP_VERSION_NAME=1.0.8" in properties, "Unexpected TZ version name")
+    require("APP_VERSION_CODE=100009" in properties, "Unexpected TZ version code")
+    require("APP_VERSION_NAME=1.0.9" in properties, "Unexpected TZ version name")
     require("APP_PACKAGE=com.tianze.tz" in properties, "Unexpected TZ package ID")
 
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
@@ -99,13 +99,15 @@ def main() -> None:
     require(
         bundled_chinese.startswith('<?xml version="1.0" encoding="utf-8"?>')
         and "Telegram Android zh-hans v59926883" in bundled_chinese
-        and bundled_chinese.count("<string name=") == 11003
+        and bundled_chinese.count("<string name=") == 11006
         and '<string name="AppName">TZ</string>' in bundled_chinese,
         "bundled Simplified Chinese language pack is incomplete",
     )
 
     manifest = read("TMessagesProj/src/main/AndroidManifest.xml")
     require('<data android:scheme="tz" />' in manifest, "TZ deep-link scheme is not registered")
+    require('<intent-filter android:autoVerify="true">' in manifest,
+            "TZ public links are not configured for Android App Links verification")
     require(
         '<data android:host="tg.tianze8.cc" android:scheme="http" />' in manifest
         and '<data android:host="tg.tianze8.cc" android:scheme="https" />' in manifest,
@@ -167,6 +169,19 @@ def main() -> None:
     password_change = read("TMessagesProj/src/main/java/org/telegram/ui/LoginPasswordChangeActivity.java")
     require('PROTOCOL_HINT = "TZ_LOGIN_PASSWORD_V1"' in password_change,
             "gramsrv login-password change protocol is missing")
+    require('<string name="TZChangeLoginPassword">修改登录密码</string>' in bundled_chinese,
+            "Simplified Chinese login-password branding is missing")
+    visible_resources = [strings, bundled_chinese]
+    visible_resources.extend(
+        path.read_text(encoding="utf-8")
+        for path in Path("TMessagesProj/src/main/res").glob("values*/strings.xml")
+    )
+    value_pattern = re.compile(r"<(?:string|item)\b[^>]*>(.*?)</(?:string|item)>", re.DOTALL)
+    visible_brand = re.compile(r"(?<![A-Za-z0-9_./:@-])Telegram(?![A-Za-z0-9_-]|\.(?:org|me|dog)\b)")
+    require(
+        all(visible_brand.search(value) is None for source in visible_resources for value in value_pattern.findall(source)),
+        "upstream Telegram branding remains in Android user-visible string values",
+    )
 
     tlrpc = read("TMessagesProj/src/main/java/org/telegram/tgnet/TLRPC.java")
     require("public static final int LAYER = 228;" in tlrpc, "Unexpected Android TL layer")

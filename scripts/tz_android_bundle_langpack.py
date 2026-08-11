@@ -13,6 +13,7 @@ from xml.sax.saxutils import escape
 
 ENTRY_RE = re.compile(r'"((?:\\.|[^"\\])*)"\s*=\s*"((?:\\.|[^"\\])*)";', re.DOTALL)
 PLURAL_SUFFIXES = ("zero", "one", "two", "few", "many", "other")
+BRAND = re.compile(r"(?<![A-Za-z0-9_./:@-])Telegram(?![A-Za-z0-9_-]|\.(?:org|me|dog)\b)")
 
 
 def unquote(value: str) -> str:
@@ -50,7 +51,7 @@ def main() -> None:
                 break
         if key in values:
             raise SystemExit(f"duplicate language-pack key: {key}")
-        values[key] = value
+        values[key] = BRAND.sub("TZ", value)
 
     if len(values) != args.expected_entries:
         raise SystemExit(f"unexpected language-pack entry count: {len(values)}")
@@ -58,6 +59,9 @@ def main() -> None:
     # Keep the upstream translation while preserving TZ application branding.
     values["AppName"] = "TZ"
     values["AppNameBeta"] = "TZ"
+    values["TZChangeLoginPassword"] = "修改登录密码"
+    values["TZLoginPasswordMinLength"] = "请输入当前登录密码，新登录密码至少需要 8 个字符。"
+    values["TZLoginPasswordChanged"] = "登录密码已修改。它与两步验证密码无关。"
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", encoding="utf-8", newline="\n") as output:
