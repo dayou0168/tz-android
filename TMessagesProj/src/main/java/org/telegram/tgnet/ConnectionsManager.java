@@ -1142,73 +1142,21 @@ public class ConnectionsManager extends BaseController {
         }
 
         protected ResolvedDomain doInBackground(Void... voids) {
-            ByteArrayOutputStream outbuf = null;
-            InputStream httpConnectionStream = null;
-            boolean done = false;
             try {
-                URL downloadUrl = new URL("https://www.google.com/resolve?name=" + currentHostName + "&type=A");
-                URLConnection httpConnection = downloadUrl.openConnection();
-                httpConnection.addRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 10_0 like Mac OS X) AppleWebKit/602.1.38 (KHTML, like Gecko) Version/10.0 Mobile/14A5297c Safari/602.1");
-                httpConnection.addRequestProperty("Host", "dns.google.com");
-                httpConnection.setConnectTimeout(1000);
-                httpConnection.setReadTimeout(2000);
-                httpConnection.connect();
-                httpConnectionStream = httpConnection.getInputStream();
-
-                outbuf = new ByteArrayOutputStream();
-
-                byte[] data = new byte[1024 * 32];
-                while (true) {
-                    int read = httpConnectionStream.read(data);
-                    if (read > 0) {
-                        outbuf.write(data, 0, read);
-                    } else if (read == -1) {
-                        break;
-                    } else {
-                        break;
+                InetAddress[] resolved = InetAddress.getAllByName(currentHostName);
+                ArrayList<String> ipv4Addresses = new ArrayList<>(resolved.length);
+                for (InetAddress address : resolved) {
+                    // The native direct-DC callback currently accepts AF_INET.
+                    // Prefer the phone's configured DNS and pass only IPv4 here.
+                    if (address instanceof Inet4Address) {
+                        ipv4Addresses.add(address.getHostAddress());
                     }
                 }
-
-                JSONObject jsonObject = new JSONObject(new String(outbuf.toByteArray()));
-                if (jsonObject.has("Answer")) {
-                    JSONArray array = jsonObject.getJSONArray("Answer");
-                    int len = array.length();
-                    if (len > 0) {
-                        ArrayList<String> addresses = new ArrayList<>(len);
-                        for (int a = 0; a < len; a++) {
-                            addresses.add(array.getJSONObject(a).getString("data"));
-                        }
-                        return new ResolvedDomain(addresses, SystemClock.elapsedRealtime());
-                    }
+                if (!ipv4Addresses.isEmpty()) {
+                    return new ResolvedDomain(ipv4Addresses, SystemClock.elapsedRealtime());
                 }
-                done = true;
             } catch (Throwable e) {
                 FileLog.e(e, false);
-            } finally {
-                try {
-                    if (httpConnectionStream != null) {
-                        httpConnectionStream.close();
-                    }
-                } catch (Throwable e) {
-                    FileLog.e(e, false);
-                }
-                try {
-                    if (outbuf != null) {
-                        outbuf.close();
-                    }
-                } catch (Exception ignore) {
-
-                }
-            }
-            if (!done) {
-                try {
-                    InetAddress address = InetAddress.getByName(currentHostName);
-                    ArrayList<String> addresses = new ArrayList<>(1);
-                    addresses.add(address.getHostAddress());
-                    return new ResolvedDomain(addresses, SystemClock.elapsedRealtime());
-                } catch (Exception e) {
-                    FileLog.e(e, false);
-                }
             }
             return null;
         }

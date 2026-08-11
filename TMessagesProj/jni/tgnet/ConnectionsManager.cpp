@@ -362,6 +362,7 @@ void *ConnectionsManager::ThreadProc(void *data) {
 }
 
 void ConnectionsManager::loadConfig() {
+    bool normalizedPrivateConfig = false;
     if (config == nullptr) {
         config = new Config(instanceNum, "tgnet.dat");
     }
@@ -414,6 +415,12 @@ void ConnectionsManager::loadConfig() {
         buffer->reuse();
     }
 
+    // TZ has one production datacenter. Persisted Telegram/test-backend state
+    // must never select DC1 or encode the handshake DC as 10002.
+    normalizedPrivateConfig = testBackend || currentDatacenterId != 2;
+    testBackend = false;
+    currentDatacenterId = 2;
+
     if (currentDatacenterId != 0 && currentUserId) {
         Datacenter *datacenter = getDatacenterWithId(currentDatacenterId);
         if (datacenter == nullptr || !datacenter->hasPermanentAuthKey()) {
@@ -432,7 +439,7 @@ void ConnectionsManager::loadConfig() {
 
     initDatacenters();
 
-    if ((!datacenters.empty() && currentDatacenterId == 0) || pushSessionId == 0) {
+    if ((!datacenters.empty() && currentDatacenterId == 0) || pushSessionId == 0 || normalizedPrivateConfig) {
         if (pushSessionId == 0) {
             RAND_bytes((uint8_t *) &pushSessionId, 8);
         }
@@ -2000,8 +2007,8 @@ void ConnectionsManager::setUserId(int64_t userId) {
 
 void ConnectionsManager::switchBackend(bool restart) {
     scheduleTask([&, restart] {
-        currentDatacenterId = 1;
-        testBackend = !testBackend;
+        currentDatacenterId = 2;
+        testBackend = false;
         if (!restart) {
             Handshake::cleanupServerKeys();
         }
@@ -3476,7 +3483,7 @@ void ConnectionsManager::applyDatacenterAddress(uint32_t datacenterId, std::stri
         Datacenter *datacenter = getDatacenterWithId(datacenterId);
         if (datacenter != nullptr) {
             std::vector<TcpAddress> addresses;
-            addresses.emplace_back(ipAddress, port, 0, "");
+            addresses.emplace_back(ipAddress, port, TcpAddressFlagStatic | TcpAddressFlagO, "");
             datacenter->suspendConnections(true);
             datacenter->replaceAddresses(addresses, 0);
             datacenter->resetAddressAndPortNum();

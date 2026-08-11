@@ -54,6 +54,24 @@ def main() -> None:
     require("datacenter->replaceAddresses(emptyAddresses, TcpAddressFlagTemp)" in body,
             "stale temporary DC addresses are not cleared")
     require("datacenter->resetAddressAndPortNum()" in body, "TZ DC address cursor is not reset")
+    require(
+        "normalizedPrivateConfig = testBackend || currentDatacenterId != 2" in connections
+        and "testBackend = false;" in connections
+        and "currentDatacenterId = 2;" in connections,
+        "persisted client state is not normalized to production DC2",
+    )
+    switch_match = re.search(
+        r"void ConnectionsManager::switchBackend\(bool restart\) \{(?P<body>.*?)\n\}",
+        connections,
+        flags=re.DOTALL,
+    )
+    require(switch_match is not None, "Could not find switchBackend")
+    require("currentDatacenterId = 2;" in switch_match.group("body"), "backend switch can leave TZ outside DC2")
+    require("testBackend = false;" in switch_match.group("body"), "test backend is not disabled")
+    require(
+        "addresses.emplace_back(ipAddress, port, TcpAddressFlagStatic | TcpAddressFlagO" in connections,
+        "runtime DC address updates can discard TZ's static custom-port flags",
+    )
 
     handshake = read("TMessagesProj/jni/tgnet/Handshake.cpp")
     datacenter = read("TMessagesProj/jni/tgnet/Datacenter.cpp")
@@ -62,8 +80,8 @@ def main() -> None:
     require("0x9aad92cdbb09df34" in handshake, "TZ RSA fingerprint is missing")
 
     properties = read("gradle.properties")
-    require("APP_VERSION_CODE=100006" in properties, "Unexpected TZ version code")
-    require("APP_VERSION_NAME=1.0.6" in properties, "Unexpected TZ version name")
+    require("APP_VERSION_CODE=100007" in properties, "Unexpected TZ version code")
+    require("APP_VERSION_NAME=1.0.7" in properties, "Unexpected TZ version name")
     require("APP_PACKAGE=com.tianze.tz" in properties, "Unexpected TZ package ID")
 
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
@@ -85,6 +103,45 @@ def main() -> None:
         "static DC endpoints do not force their explicit custom port",
     )
 
+    connection_socket = read("TMessagesProj/jni/tgnet/ConnectionSocket.cpp")
+    require(
+        "waitingForHostResolve = address" in connection_socket
+        and "delegate->getHostByName(address, instanceNum, this)" in connection_socket,
+        "direct DC hostnames are not resolved before opening the socket",
+    )
+
+    java_connections = read("TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java")
+    resolver_match = re.search(
+        r"class ResolveHostByNameTask.*?ResolvedDomain doInBackground\(Void\.\.\. voids\) \{(?P<body>.*?)\n        \}",
+        java_connections,
+        flags=re.DOTALL,
+    )
+    require(resolver_match is not None, "Could not find the direct hostname resolver")
+    resolver_body = resolver_match.group("body")
+    require("InetAddress.getAllByName(currentHostName)" in resolver_body,
+            "direct DC resolution does not use the device DNS")
+    require("address instanceof Inet4Address" in resolver_body,
+            "direct DC resolution does not constrain the native AF_INET callback")
+    require("google.com/resolve" not in resolver_body and "dns.google.com" not in resolver_body,
+            "direct DC resolution still depends on Google DNS")
+
+    login = read("TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java")
+    require("final boolean allowTestBackend = false;" in login,
+            "the incompatible test-backend selector is still exposed")
+    require(
+        'params.putBoolean("tzLoginPassword", res.type.length == 8)' in login
+        and "codeFieldContainer.setPasswordMode(tzLoginPassword)" in login
+        and "req.phone_code = code" in login,
+        "gramsrv account-password login flow is incomplete",
+    )
+
+    password_change = read("TMessagesProj/src/main/java/org/telegram/ui/LoginPasswordChangeActivity.java")
+    require('PROTOCOL_HINT = "TZ_LOGIN_PASSWORD_V1"' in password_change,
+            "gramsrv login-password change protocol is missing")
+
+    tlrpc = read("TMessagesProj/src/main/java/org/telegram/tgnet/TLRPC.java")
+    require("public static final int LAYER = 228;" in tlrpc, "Unexpected Android TL layer")
+
     standalone_gradle = read("TMessagesProj_AppStandalone/build.gradle")
     require('project.hasProperty("TZ_NO_GOOGLE")' in standalone_gradle, "No-Google Gradle gate is missing")
     standalone_loader = read(
@@ -103,6 +160,23 @@ def main() -> None:
         and "-PTZ_NO_GOOGLE=true" in workflow,
         "CI is not building the no-Google Standalone variant",
     )
+    require(
+        "TZ_ANDROID_KEYSTORE_BASE64" in workflow
+        and "base64 --decode" in workflow
+        and "TZ_ANDROID_KEYSTORE_SHA256" in workflow
+        and "apksigner" in workflow,
+        "CI does not restore and verify the private Android signing key",
+    )
+    require(
+        subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "TMessagesProj/config/release.keystore"],
+            capture_output=True,
+            text=True,
+        ).returncode != 0,
+        "the Android release signing key must not be tracked by git",
+    )
+    require("TMessagesProj/config/release.keystore" in read(".gitignore"),
+            "the private Android signing key is not ignored")
     print("TZ Android source verification passed")
 
 
