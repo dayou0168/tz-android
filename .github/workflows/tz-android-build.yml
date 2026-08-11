@@ -148,4 +148,4 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
             --title "TZ Android 1.0.7" \
-            --notes "TZ Android 1.0.7：参考 gramsrv 官方 Android 客户端完成连接链路修复；普通 MTProto 直连支持域名，使用设备系统 DNS（不依赖 Google DNS），强制生产 DC2 并清除测试后端状态，固定 TCP 2398，保留 static/this_port_only 地址标志；继续使用匹配的 gramsrv RSA、TL Layer 228、密码登录、tz:// 邀请链接、Full LTO 和无 Google 服务构建。"
+            --notes "TZ Android 1.0.7：参考 gramsrv 官方 Android 客户端完成连接链路修复；普通 MTProto 直连支持域名，使用设备系统 DNS（不依赖 Google DNS），强制生产 DC2 并清除测试后端状态，固定 TCP 2398，保留 static/this_port_only 地址标志；继续使用匹配的 gramsrv RSA、TL Layer 228、密码登录、tz:// 邀请链接、Full LTO 和无 Google 服务构建。首次从旧测试签名升级时，需要先卸载旧 APK；从 1.0.7 起可使用相同私钥正常覆盖升级。"
