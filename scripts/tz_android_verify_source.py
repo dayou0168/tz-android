@@ -85,8 +85,8 @@ def main() -> None:
     require("0x9aad92cdbb09df34" in handshake, "TZ RSA fingerprint is missing")
 
     properties = read("gradle.properties")
-    require("APP_VERSION_CODE=100010" in properties, "Unexpected TZ version code")
-    require("APP_VERSION_NAME=1.0.10" in properties, "Unexpected TZ version name")
+    require("APP_VERSION_CODE=100011" in properties, "Unexpected TZ version code")
+    require("APP_VERSION_NAME=1.0.11" in properties, "Unexpected TZ version name")
     require("APP_PACKAGE=com.tianze.tz" in properties, "Unexpected TZ package ID")
 
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
@@ -191,6 +191,15 @@ def main() -> None:
     tlrpc = read("TMessagesProj/src/main/java/org/telegram/tgnet/TLRPC.java")
     require("public static final int LAYER = 228;" in tlrpc, "Unexpected Android TL layer")
 
+    chat_message_cell = read("TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java")
+    require(
+        "photoImage.setAllowDrawWhileCacheGenerating(messageObject != null && messageObject.isAnimatedSticker())"
+        in chat_message_cell
+        and 'ImageLocation.getForObject(currentPhotoObjectThumb, photoParentObject), "b1", messageObject.pathThumb'
+        in chat_message_cell,
+        "animated sticker cache-generation rendering or raster fallback is missing",
+    )
+
     standalone_gradle = read("TMessagesProj_AppStandalone/build.gradle")
     require('project.hasProperty("TZ_NO_GOOGLE")' in standalone_gradle, "No-Google Gradle gate is missing")
     require(
@@ -233,7 +242,7 @@ def main() -> None:
     require(
         "TZ_ANDROID_GOOGLE_SERVICES_JSON_BASE64" in workflow
         and "-PTZ_GOOGLE_PUSH=true" in workflow
-        and "TZ-Android-1.0.10-fcm.apk" in workflow,
+        and "TZ-Android-1.0.11-fcm.apk" in workflow,
         "CI is not building the FCM Standalone variant",
     )
     require(
