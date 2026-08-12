@@ -193,21 +193,44 @@ def main() -> None:
 
     standalone_gradle = read("TMessagesProj_AppStandalone/build.gradle")
     require('project.hasProperty("TZ_NO_GOOGLE")' in standalone_gradle, "No-Google Gradle gate is missing")
+    require(
+        'project.hasProperty("TZ_GOOGLE_PUSH")' in standalone_gradle
+        and '"TZ_GOOGLE_PUSH_ENABLED"' in standalone_gradle,
+        "FCM-enabled Standalone build gate is missing",
+    )
     standalone_loader = read(
         "TMessagesProj_AppStandalone/src/main/java/org/telegram/messenger/ApplicationLoaderImpl.java"
     )
-    require("NO_GOOGLE_PUSH_PROVIDER" in standalone_loader, "No-Google push provider is missing")
+    require(
+        "NO_GOOGLE_PUSH_PROVIDER" in standalone_loader
+        and "BuildConfig.TZ_GOOGLE_PUSH_ENABLED" in standalone_loader
+        and "GooglePushListenerServiceProvider.INSTANCE" in standalone_loader,
+        "dual Google/no-Google push provider selection is missing",
+    )
+    gcm_listener = read("TMessagesProj/src/main/java/org/telegram/messenger/GcmPushListenerService.java")
+    require(
+        '"1".equals(data.get("tz_sync"))' in gcm_listener
+        and "resumeNetworkMaybe()" in gcm_listener,
+        "content-free FCM sync wake-up handling is missing",
+    )
     standalone_manifest = read("TMessagesProj_AppStandalone/src/main/AndroidManifest.xml")
     require(
         'android:name="org.telegram.messenger.GcmPushListenerService"' in standalone_manifest
-        and 'tools:node="remove"' in standalone_manifest,
-        "FCM manifest removal gate is missing",
+        and 'tools:node="${tzGooglePushManifestNode}"' in standalone_manifest
+        and "tzGooglePushManifestNode:" in standalone_gradle,
+        "dual FCM manifest merge/removal gate is missing",
     )
     workflow = read(".github/workflows/tz-android-build.yml")
     require(
         ":TMessagesProj_AppStandalone:assembleAfatStandalone" in workflow
         and "-PTZ_NO_GOOGLE=true" in workflow,
         "CI is not building the no-Google Standalone variant",
+    )
+    require(
+        "TZ_ANDROID_GOOGLE_SERVICES_JSON_BASE64" in workflow
+        and "-PTZ_GOOGLE_PUSH=true" in workflow
+        and "TZ-Android-1.0.9-fcm.apk" in workflow,
+        "CI is not building the FCM Standalone variant",
     )
     require(
         "TZ_ANDROID_KEYSTORE_BASE64" in workflow

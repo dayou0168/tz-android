@@ -13,6 +13,8 @@ import androidx.annotation.NonNull;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
+import org.telegram.tgnet.ConnectionsManager;
+
 import java.util.Map;
 
 public class GcmPushListenerService extends FirebaseMessagingService {
@@ -27,7 +29,31 @@ public class GcmPushListenerService extends FirebaseMessagingService {
             FileLog.d("FCM received data: " + data + " from: " + from);
         }
 
-        PushListenerController.processRemoteMessage(PushListenerController.PUSH_TYPE_FIREBASE, data.get("p"), time);
+        // TZ's server intentionally sends only an authenticated, content-free
+        // wake-up marker through FCM. The actual update remains on MTProto, so
+        // message text and media never pass through Firebase.
+        if ("1".equals(data.get("tz_sync"))) {
+            ApplicationLoader.postInitApplication();
+            final long targetUserId = Utilities.parseLong(data.get("user_id"));
+            AndroidUtilities.runOnUIThread(() -> {
+                for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
+                    UserConfig userConfig = UserConfig.getInstance(account);
+                    if (!userConfig.isClientActivated()) {
+                        continue;
+                    }
+                    if (targetUserId != 0 && userConfig.getClientUserId() != targetUserId) {
+                        continue;
+                    }
+                    ConnectionsManager.getInstance(account).resumeNetworkMaybe();
+                }
+            });
+            return;
+        }
+
+        String encryptedPayload = data.get("p");
+        if (encryptedPayload != null) {
+            PushListenerController.processRemoteMessage(PushListenerController.PUSH_TYPE_FIREBASE, encryptedPayload, time);
+        }
     }
 
     @Override

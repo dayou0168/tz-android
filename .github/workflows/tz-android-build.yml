@@ -27,6 +27,7 @@ jobs:
       TZ_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.TZ_ANDROID_KEYSTORE_PASSWORD }}
       TZ_ANDROID_KEY_ALIAS: ${{ secrets.TZ_ANDROID_KEY_ALIAS }}
       TZ_ANDROID_KEY_PASSWORD: ${{ secrets.TZ_ANDROID_KEY_PASSWORD }}
+      TZ_ANDROID_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.TZ_ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}
       TZ_ANDROID_KEYSTORE_SHA256: a2c539a25f5a52c13fbc10adba9e5cf49b7c65c5873aeb714aa40cc1cfdce6fa
       TZ_ANDROID_CERT_SHA256: F7:7C:34:D2:85:28:09:74:BA:8D:19:55:F2:BB:94:74:3A:0A:AC:24:61:6D:97:DF:8B:A6:09:43:78:E0:11:16
 
@@ -47,12 +48,14 @@ jobs:
           test -n "$TZ_ANDROID_KEYSTORE_PASSWORD" || { echo "TZ_ANDROID_KEYSTORE_PASSWORD is missing"; exit 1; }
           test -n "$TZ_ANDROID_KEY_ALIAS" || { echo "TZ_ANDROID_KEY_ALIAS is missing"; exit 1; }
           test -n "$TZ_ANDROID_KEY_PASSWORD" || { echo "TZ_ANDROID_KEY_PASSWORD is missing"; exit 1; }
+          test -n "$TZ_ANDROID_GOOGLE_SERVICES_JSON_BASE64" || { echo "TZ_ANDROID_GOOGLE_SERVICES_JSON_BASE64 is missing"; exit 1; }
           echo "::add-mask::$TZ_ANDROID_API_ID"
           echo "::add-mask::$TZ_ANDROID_API_HASH"
           echo "::add-mask::$TZ_ANDROID_KEYSTORE_BASE64"
           echo "::add-mask::$TZ_ANDROID_KEYSTORE_PASSWORD"
           echo "::add-mask::$TZ_ANDROID_KEY_ALIAS"
           echo "::add-mask::$TZ_ANDROID_KEY_PASSWORD"
+          echo "::add-mask::$TZ_ANDROID_GOOGLE_SERVICES_JSON_BASE64"
 
       - name: Set up Java 17
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
@@ -109,7 +112,7 @@ jobs:
             --no-daemon \
             --stacktrace
 
-      - name: Collect APK and provenance
+      - name: Collect no-Google APK
         shell: bash
         run: |
           set -euo pipefail
@@ -117,6 +120,46 @@ jobs:
           mkdir -p "$output"
           apk="$(find TMessagesProj_AppStandalone/build/outputs/apk -type f -name '*.apk' -print -quit)"
           test -n "$apk"
+          cp "$apk" "$output/TZ-Android-1.0.9-no-google.apk"
+
+      - name: Render private Firebase client configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$TZ_ANDROID_GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > TMessagesProj/google-services.json
+          cp TMessagesProj/google-services.json TMessagesProj_AppStandalone/google-services.json
+          python3 - <<'PY'
+          import json
+          for path in ("TMessagesProj/google-services.json", "TMessagesProj_AppStandalone/google-services.json"):
+              data = json.load(open(path, encoding="utf-8"))
+              packages = {
+                  client["client_info"]["android_client_info"]["package_name"]
+                  for client in data.get("client", [])
+              }
+              if "com.tianze.tz" not in packages:
+                  raise SystemExit(f"{path} does not contain com.tianze.tz")
+          PY
+
+      - name: Build FCM release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :TMessagesProj_AppStandalone:assembleAfatStandalone \
+            -PTZ_GOOGLE_PUSH=true \
+            -PRELEASE_STORE_PASSWORD="$TZ_ANDROID_KEYSTORE_PASSWORD" \
+            -PRELEASE_KEY_ALIAS="$TZ_ANDROID_KEY_ALIAS" \
+            -PRELEASE_KEY_PASSWORD="$TZ_ANDROID_KEY_PASSWORD" \
+            --no-daemon \
+            --stacktrace
+
+      - name: Collect FCM APK and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/tz-android-apk"
+          apk="$(find TMessagesProj_AppStandalone/build/outputs/apk -type f -name '*.apk' -print -quit)"
+          test -n "$apk"
+          cp "$apk" "$output/TZ-Android-1.0.9-fcm.apk"
           unzip -p "$apk" 'lib/*/libtmessages*.so' | strings > "$RUNNER_TEMP/tz-native-strings.txt"
           grep -Fq 'tztg.tianze8.cc' "$RUNNER_TEMP/tz-native-strings.txt"
           grep -Fq 'MIIBCgKCAQEA7lyx4eQO/cyY9icmLgUQ2nxZ++xP+q1AQEfCRSvilbS72Qvyj/dJ' "$RUNNER_TEMP/tz-native-strings.txt"
@@ -125,14 +168,13 @@ jobs:
             --print-certs \
             "$apk" | tee "$RUNNER_TEMP/tz-apk-signature.txt"
           grep -Fqi "Signer #1 certificate SHA-256 digest: ${TZ_ANDROID_CERT_SHA256//:/}" "$RUNNER_TEMP/tz-apk-signature.txt"
-          cp "$apk" "$output/TZ-Android-1.0.9.apk"
           cp TZ_ANDROID_UPSTREAM.lock "$output/"
           (cd "$output" && sha256sum *.apk > SHA256SUMS.txt)
 
       - name: Upload APK candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: TZ-Android-1.0.9-no-google
+          name: TZ-Android-1.0.9-dual
           path: ${{ runner.temp }}/tz-android-apk
           if-no-files-found: error
           retention-days: 14
