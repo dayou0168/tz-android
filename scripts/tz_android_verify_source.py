@@ -85,8 +85,8 @@ def main() -> None:
     require("0x9aad92cdbb09df34" in handshake, "TZ RSA fingerprint is missing")
 
     properties = read("gradle.properties")
-    require("APP_VERSION_CODE=100009" in properties, "Unexpected TZ version code")
-    require("APP_VERSION_NAME=1.0.9" in properties, "Unexpected TZ version name")
+    require("APP_VERSION_CODE=100010" in properties, "Unexpected TZ version code")
+    require("APP_VERSION_NAME=1.0.10" in properties, "Unexpected TZ version name")
     require("APP_PACKAGE=com.tianze.tz" in properties, "Unexpected TZ package ID")
 
     strings = read("TMessagesProj/src/main/res/values/strings.xml")
@@ -213,11 +213,15 @@ def main() -> None:
         and "resumeNetworkMaybe()" in gcm_listener,
         "content-free FCM sync wake-up handling is missing",
     )
-    standalone_manifest = read("TMessagesProj_AppStandalone/src/main/AndroidManifest.xml")
+    no_google_manifest = read("TMessagesProj_AppStandalone/src/noGoogle/AndroidManifest.xml")
+    google_push_manifest = read("TMessagesProj_AppStandalone/src/googlePush/AndroidManifest.xml")
     require(
-        'android:name="org.telegram.messenger.GcmPushListenerService"' in standalone_manifest
-        and 'tools:node="${tzGooglePushManifestNode}"' in standalone_manifest
-        and "tzGooglePushManifestNode:" in standalone_gradle,
+        'android:name="org.telegram.messenger.GcmPushListenerService"' in no_google_manifest
+        and 'tools:node="remove"' in no_google_manifest
+        and 'android:name="org.telegram.messenger.GcmPushListenerService"' in google_push_manifest
+        and 'tools:node="merge"' in google_push_manifest
+        and "src/noGoogle/AndroidManifest.xml" in standalone_gradle
+        and "src/googlePush/AndroidManifest.xml" in standalone_gradle,
         "dual FCM manifest merge/removal gate is missing",
     )
     workflow = read(".github/workflows/tz-android-build.yml")
@@ -229,7 +233,7 @@ def main() -> None:
     require(
         "TZ_ANDROID_GOOGLE_SERVICES_JSON_BASE64" in workflow
         and "-PTZ_GOOGLE_PUSH=true" in workflow
-        and "TZ-Android-1.0.9-fcm.apk" in workflow,
+        and "TZ-Android-1.0.10-fcm.apk" in workflow,
         "CI is not building the FCM Standalone variant",
     )
     require(

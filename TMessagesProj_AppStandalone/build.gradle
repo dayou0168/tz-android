@@ -89,6 +89,9 @@ android {
     sourceSets.standalone {
         manifest.srcFile '../TMessagesProj/config/release/AndroidManifest_standalone.xml'
     }
+    // Select a concrete overlay. tools:node manifest placeholders are not
+    // expanded reliably for the custom afatStandalone variant.
+    sourceSets.main.manifest.srcFile tzGooglePushEnabled +        ? 'src/googlePush/AndroidManifest.xml' +        : 'src/noGoogle/AndroidManifest.xml'
 
     flavorDimensions "minApi"
 
@@ -127,7 +130,6 @@ android {
         targetSdkVersion 35
         versionName APP_VERSION_NAME
         buildConfigField "boolean", "TZ_GOOGLE_PUSH_ENABLED", tzGooglePushEnabled ? "true" : "false"
-        manifestPlaceholders = [tzGooglePushManifestNode: tzGooglePushEnabled ? "merge" : "remove"]
         ndkVersion "27.2.12479018"
 
         multiDexEnabled true

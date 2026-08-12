@@ -7,7 +7,7 @@ on:
       - codex/bootstrap-tz-android
       - main
     tags:
-      - "1.0.9"
+      - "1.0.10"
 
 permissions:
   contents: write
@@ -99,6 +99,16 @@ jobs:
       - name: Render private API credentials
         run: python3 scripts/tz_android_render_build_vars.py
 
+      - name: Verify no-Google manifest before native compilation
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew :TMessagesProj_AppStandalone:processAfatStandaloneMainManifest \
+            -PTZ_NO_GOOGLE=true \
+            --no-daemon \
+            --stacktrace
+
       - name: Build no-Google release APK
         shell: bash
         run: |
@@ -120,7 +130,7 @@ jobs:
           mkdir -p "$output"
           apk="$(find TMessagesProj_AppStandalone/build/outputs/apk -type f -name '*.apk' -print -quit)"
           test -n "$apk"
-          cp "$apk" "$output/TZ-Android-1.0.9-no-google.apk"
+          cp "$apk" "$output/TZ-Android-1.0.10-no-google.apk"
 
       - name: Render private Firebase client configuration
         shell: bash
@@ -144,6 +154,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          ./gradlew :TMessagesProj_AppStandalone:processAfatStandaloneMainManifest \
+            -PTZ_GOOGLE_PUSH=true \
+            --no-daemon \
+            --stacktrace
           ./gradlew :TMessagesProj_AppStandalone:assembleAfatStandalone \
             -PTZ_GOOGLE_PUSH=true \
             -PRELEASE_STORE_PASSWORD="$TZ_ANDROID_KEYSTORE_PASSWORD" \
@@ -159,7 +173,7 @@ jobs:
           output="$RUNNER_TEMP/tz-android-apk"
           apk="$(find TMessagesProj_AppStandalone/build/outputs/apk -type f -name '*.apk' -print -quit)"
           test -n "$apk"
-          cp "$apk" "$output/TZ-Android-1.0.9-fcm.apk"
+          cp "$apk" "$output/TZ-Android-1.0.10-fcm.apk"
           unzip -p "$apk" 'lib/*/libtmessages*.so' | strings > "$RUNNER_TEMP/tz-native-strings.txt"
           grep -Fq 'tztg.tianze8.cc' "$RUNNER_TEMP/tz-native-strings.txt"
           grep -Fq 'MIIBCgKCAQEA7lyx4eQO/cyY9icmLgUQ2nxZ++xP+q1AQEfCRSvilbS72Qvyj/dJ' "$RUNNER_TEMP/tz-native-strings.txt"
@@ -174,7 +188,7 @@ jobs:
       - name: Upload APK candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: TZ-Android-1.0.9-dual
+          name: TZ-Android-1.0.10-dual
           path: ${{ runner.temp }}/tz-android-apk
           if-no-files-found: error
           retention-days: 14
@@ -189,5 +203,5 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" "$RUNNER_TEMP"/tz-android-apk/* \
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
-            --title "TZ Android 1.0.9" \
-            --notes "TZ Android 1.0.9：完成客户端可见品牌文案的 TZ 化，补齐修改登录密码的简体中文文案，并为 tg.tianze8.cc 启用 Android App Links 验证标记。邀请链接和用户名链接继续直接进入 TZ；保留生产 DC2、gramsrv RSA、TL Layer 228、密码登录、Full LTO、无 Google 服务和 TZ 私有签名。"
+            --title "TZ Android 1.0.10" \
+            --notes "TZ Android 1.0.10：修复无 Google 与 FCM 双构建的 Manifest 合并配置，分别使用确定的 Google 组件移除/保留清单，不再依赖未展开的 tools:node 占位符；继续提供私有签名的 no-google 与 FCM 两个 Full LTO APK。保留生产 DC2、gramsrv RSA、TL Layer 228、密码登录、简体中文默认语言及 tg.tianze8.cc App Links。客户端可见的旧 Telesrv 品牌文字由 TZ Server 1.0.7 语言包统一刷新。"
