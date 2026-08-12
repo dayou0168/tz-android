@@ -91,7 +91,11 @@ android {
     }
     // Select a concrete overlay. tools:node manifest placeholders are not
     // expanded reliably for the custom afatStandalone variant.
-    sourceSets.main.manifest.srcFile tzGooglePushEnabled +        ? 'src/googlePush/AndroidManifest.xml' +        : 'src/noGoogle/AndroidManifest.xml'
+    sourceSets.main.manifest.srcFile(
+        tzGooglePushEnabled
+            ? 'src/googlePush/AndroidManifest.xml'
+            : 'src/noGoogle/AndroidManifest.xml'
+    )
 
     flavorDimensions "minApi"
 
