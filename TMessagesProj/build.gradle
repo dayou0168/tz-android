@@ -239,7 +239,10 @@ def getProps(String propName) {
         return "";
     }
 }
-if (!project.hasProperty("TZ_NO_GOOGLE")) {
+// The custom TZ FCM build applies google-services only to the final
+// com.tianze.tz application module. Applying it to this library makes the
+// plugin look for an obsolete org.telegram.messenger Firebase client.
+if (!project.hasProperty("TZ_NO_GOOGLE") && !project.hasProperty("TZ_GOOGLE_PUSH")) {
     apply plugin: 'com.google.gms.google-services'
 }
 

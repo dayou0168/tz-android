@@ -99,6 +99,29 @@ jobs:
       - name: Render private API credentials
         run: python3 scripts/tz_android_render_build_vars.py
 
+      - name: Render and verify private Firebase client configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$TZ_ANDROID_GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > TMessagesProj/google-services.json
+          cp TMessagesProj/google-services.json TMessagesProj_AppStandalone/google-services.json
+          python3 - <<'PY'
+          import json
+          for path in ("TMessagesProj/google-services.json", "TMessagesProj_AppStandalone/google-services.json"):
+              data = json.load(open(path, encoding="utf-8"))
+              packages = {
+                  client["client_info"]["android_client_info"]["package_name"]
+                  for client in data.get("client", [])
+              }
+              if "com.tianze.tz" not in packages:
+                  raise SystemExit(f"{path} does not contain com.tianze.tz")
+          PY
+          chmod +x gradlew
+          ./gradlew :TMessagesProj_AppStandalone:processAfatStandaloneMainManifest \
+            -PTZ_GOOGLE_PUSH=true \
+            --no-daemon \
+            --stacktrace
+
       - name: Verify no-Google manifest before native compilation
         shell: bash
         run: |
@@ -131,24 +154,6 @@ jobs:
           apk="$(find TMessagesProj_AppStandalone/build/outputs/apk -type f -name '*.apk' -print -quit)"
           test -n "$apk"
           cp "$apk" "$output/TZ-Android-1.0.10-no-google.apk"
-
-      - name: Render private Firebase client configuration
-        shell: bash
-        run: |
-          set -euo pipefail
-          printf '%s' "$TZ_ANDROID_GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > TMessagesProj/google-services.json
-          cp TMessagesProj/google-services.json TMessagesProj_AppStandalone/google-services.json
-          python3 - <<'PY'
-          import json
-          for path in ("TMessagesProj/google-services.json", "TMessagesProj_AppStandalone/google-services.json"):
-              data = json.load(open(path, encoding="utf-8"))
-              packages = {
-                  client["client_info"]["android_client_info"]["package_name"]
-                  for client in data.get("client", [])
-              }
-              if "com.tianze.tz" not in packages:
-                  raise SystemExit(f"{path} does not contain com.tianze.tz")
-          PY
 
       - name: Build FCM release APK
         shell: bash
