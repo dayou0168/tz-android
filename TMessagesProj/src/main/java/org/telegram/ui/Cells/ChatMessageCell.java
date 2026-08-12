@@ -6742,6 +6742,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public MultiLayoutTypingAnimator botDraftTypingAnimator;
 
     private void setMessageContent(MessageObject messageObject, MessageObject.GroupedMessages groupedMessages, boolean bottomNear, boolean topNear, boolean firstInChat, boolean lastInChatList) {
+        // Medium/low performance devices generate a bitmap cache for TGS stickers.  Do not
+        // leave the chat cell showing only its vector placeholder while that cache is being
+        // built (or if cache generation fails): render frames directly in the meantime.
+        // Reset this for every recycled cell so non-sticker media keeps the default behavior.
+        photoImage.setAllowDrawWhileCacheGenerating(messageObject != null && messageObject.isAnimatedSticker());
         if (messageObject.checkLayout() || currentPosition != null && lastHeight != AndroidUtilities.displaySize.y) {
             currentMessageObject = null;
         }
@@ -9748,7 +9753,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                             }
                         } else if (messageObject.pathThumb != null) {
                             photoImage.setImage(ImageLocation.getForDocument(messageObject.getDocument()), filter,
-                                    messageObject.pathThumb,
+                                    ImageLocation.getForObject(currentPhotoObjectThumb, photoParentObject), "b1", messageObject.pathThumb,
                                     messageObject.getDocument().size, isWebpSticker ? "webp" : null, parentObject, 1);
                         } else if (messageObject.attachPathExists) {
                             photoImage.setImage(ImageLocation.getForPath(messageObject.messageOwner.attachPath), filter,
