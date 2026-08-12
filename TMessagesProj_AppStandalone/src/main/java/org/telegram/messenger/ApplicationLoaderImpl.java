@@ -61,7 +61,7 @@ public class ApplicationLoaderImpl extends ApplicationLoader {
     @Override
     protected PushListenerController.IPushListenerServiceProvider onCreatePushProvider() {
         return BuildConfig.TZ_GOOGLE_PUSH_ENABLED
-                ? GooglePushListenerServiceProvider.INSTANCE
+                ? PushListenerController.GooglePushListenerServiceProvider.INSTANCE
                 : NO_GOOGLE_PUSH_PROVIDER;
     }
 
